@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
@@ -13,6 +12,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
@@ -38,9 +38,8 @@ public class DynamicObjectInsert {
 
 	public static final String TEMPLATE_PREFIX = "${";
 	public static final String TEMPLATE_SUFIX = "}";
-	public static final String TEMPLATE_AVATAR = "${avatar}";
+	public static final String TEMPLATE_TEXT = "${avatar}";
 	public static XWPFDocument document;
-	public static String destinationFile;
 
 	static XmlCursor setCursorToNextStartToken(XmlObject object) {
 		XmlCursor cursor = object.newCursor();
@@ -59,8 +58,10 @@ public class DynamicObjectInsert {
 	}
 
 	public static void main(String[] args) throws Exception {
+		
+		String destinationFile = "D:/image.jpg";
 
-		new DynamicObjectInsert().construct();
+		new DynamicObjectInsert().construct(destinationFile);
 
 		new DocxToPdfConversion().ConvertToPDF(docPath1, pdfPath1);
 
@@ -68,14 +69,13 @@ public class DynamicObjectInsert {
 	}
 
 	/** construct method for JSON Array to replace placeholder */
-	private void construct() throws Exception {
+	private void construct(String destinationFile) throws Exception {
 		JSONArray jsonArray = convertDataTOJSONFromFile(inputJSONSource);
 		if (jsonArray == null) {
 			System.out.println("Unable to contninue invalid data");
 			return;
 		}
-		System.out.println(jsonArray);
-
+		
 		XWPFDocument document = new XWPFDocument(new FileInputStream(templateSource));
 		XWPFTable tableCopy;
 		XWPFParagraph paragraph;
@@ -99,12 +99,10 @@ public class DynamicObjectInsert {
 			/** copy the template table */
 			tableCopy = new XWPFTable((CTTbl) cTTblTemplate.copy(), document);
 
-			String destinationFile = "";
-
-			/** fill in data in tableCopy */
+			
+			replaceImageInTables(tableCopy, jsonObject, destinationFile);
 			formatTableData(tableCopy, jsonObject);
-			// replaceImageInTables(document, destinationFile);
-
+			
 			/** set tableCopy at position t instead of table */
 			document.setTable(t + 1, tableCopy);
 
@@ -140,31 +138,20 @@ public class DynamicObjectInsert {
 	}
 
 	/** replacing the placeholder in cell */
-	private void formatTableData(XWPFTable table, JSONObject jsonObject) throws NullPointerException, Exception {
-		
+	private void formatTableData(XWPFTable table, JSONObject jsonObject) {
 		for (XWPFTableRow xwpfTableRow : table.getRows()) {
 			for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
 				for (XWPFParagraph xwpfParagraph : xwpfTableCell.getParagraphs()) {
 					for (XWPFRun xwpfRun : xwpfParagraph.getRuns()) {
 						String text = xwpfRun.text();
-						System.out.println(text);
 						if (text.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_SUFIX)) {
 							text = text.substring(text.indexOf(TEMPLATE_PREFIX) + TEMPLATE_PREFIX.length(),
 									text.indexOf(TEMPLATE_SUFIX));
-							String textValue = (String) jsonObject.get(text);
-							System.out.println(textValue);
-							if (textValue.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_AVATAR)) {
-								String imageValue = (String) jsonObject.get(text);
-								loadImagesFromURL(imageValue, destinationFile);
-								xwpfRun.setText("", 0);
-								xwpfRun.addPicture(loadImagesFromURL(imageValue, destinationFile), XWPFDocument.PICTURE_TYPE_JPEG, destinationFile,
-										Units.toEMU(100), Units.toEMU(125));
-								
-							} else {
-								text = text.replace(text, textValue);
-								xwpfRun.setText(text, 0);
-							setRun(xwpfRun, "Times New Roman", "0000ff", 16, false, false);
-							}
+							String value1 = (String) jsonObject.get(text);
+							text = text.replace(text, value1);
+							xwpfRun.setText(text, 0);
+							setRun(xwpfRun, "Times New Roman", "", 16, true, false);
+
 						}
 					}
 				}
@@ -184,58 +171,33 @@ public class DynamicObjectInsert {
 		return xwpfRun;
 	}
 
-//	static void replaceImageInTables(XWPFDocument document, String destinationFile)
-//			throws Exception, NullPointerException {
-//		JSONArray jsonArray = convertDataTOJSONFromFile(inputJSONSource);
-//		if (jsonArray == null) {
-//			System.out.println("Unable to contninue invalid data");
-//			return;
-//		}
-//
-//		document = new XWPFDocument(new FileInputStream(templateSource));
-//		for (int t = 0; t < jsonArray.length(); t++) {
-//			JSONObject jsonObject = jsonArray.getJSONObject(t);
-//
-//			String url = jsonObject.get("avatar").toString();
-//			System.out.println(url);
-//
-//			URL url1 = new URL(url);
-//			InputStream is = url1.openStream();
-//			OutputStream os = new FileOutputStream(destinationFile);
-//
-//			byte[] b = new byte[2048];
-//			int length;
-//
-//			while ((length = is.read(b)) != -1) {
-//				os.write(b, 0, length);
-//
-//			}
-//
-//			is.close();
-//			os.close();
-//		}
-//
-//		FileInputStream is = new FileInputStream(destinationFile);
-//		for (XWPFTable xwpfTable1 : document.getTables()) {
-//			for (XWPFTableRow xwpfTableRow : xwpfTable1.getRows()) {
-//				for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
-//					for (XWPFParagraph xwpfParagraph1 : xwpfTableCell.getParagraphs()) {
-//						for (XWPFRun xwpfRun : xwpfParagraph1.getRuns()) {
-//							xwpfRun.getDocument();
-//							String text = xwpfRun.text();
-//							if (text.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_AVATAR)) {
-//								xwpfRun.setText("", 0);
-//								xwpfRun.addPicture(is, XWPFDocument.PICTURE_TYPE_JPEG, destinationFile,
-//										Units.toEMU(100), Units.toEMU(125));
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
+	static void replaceImageInTables(XWPFTable table, JSONObject jsonObject, String destinationFile)
+			throws Exception, NullPointerException {
+		FileInputStream is = new FileInputStream(destinationFile);
+		for (XWPFTableRow xwpfTableRow : table.getRows()) {
+			for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
+				for (XWPFParagraph xwpfParagraph1 : xwpfTableCell.getParagraphs()) {
+					xwpfParagraph1.setAlignment(ParagraphAlignment.CENTER);
+					xwpfTableCell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
+					for (XWPFRun xwpfRun : xwpfParagraph1.getRuns()) {
+						xwpfRun.getDocument();
+						String text = xwpfRun.text();
+						if (text.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_TEXT)) {
+							String url = jsonObject.get("avatar").toString();
+							loadUrl(url, destinationFile); 
+							xwpfRun.setText("", 0);
+							xwpfRun.addPicture(is, XWPFDocument.PICTURE_TYPE_JPEG, destinationFile, Units.toEMU(120),
+									Units.toEMU(110));
 
-	private static InputStream loadImagesFromURL(String url, String destinationFile) throws NullPointerException, Exception {
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public static String loadUrl(String url, String destinationFile) throws NullPointerException, Exception {
+
 		URL url1 = new URL(url);
 		InputStream is = url1.openStream();
 		OutputStream os = new FileOutputStream(destinationFile);
@@ -245,34 +207,11 @@ public class DynamicObjectInsert {
 
 		while ((length = is.read(b)) != -1) {
 			os.write(b, 0, length);
-        }
-        is.close();
+		}
+		is.close();
 		os.close();
-		replaceImageInTable(destinationFile);
-		return is;
-	}
+		return destinationFile;
 
-  private static FileInputStream replaceImageInTable(String destinationFile)
-			throws Exception, NullPointerException {
-		FileInputStream is = new FileInputStream(destinationFile);
-//		for (XWPFTable xwpfTable1 : document.getTables()) {
-//			for (XWPFTableRow xwpfTableRow : xwpfTable1.getRows()) {
-//				for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
-//					for (XWPFParagraph xwpfParagraph1 : xwpfTableCell.getParagraphs()) {
-//						for (XWPFRun xwpfRun : xwpfParagraph1.getRuns()) {
-//							xwpfRun.getDocument();
-//							String text = xwpfRun.text();
-//							if (text.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_AVATAR)) {
-//								xwpfRun.setText("", 0);
-//								xwpfRun.addPicture(is, XWPFDocument.PICTURE_TYPE_JPEG, destinationFile,
-//										Units.toEMU(130), Units.toEMU(130));
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-		return is;
 	}
 
 	/** replace text in paragraph */
