@@ -58,7 +58,7 @@ public class DynamicObjectInsert {
 	}
 
 	public static void main(String[] args) throws Exception {
-		
+
 		String destinationFile = "D:/image.jpg";
 
 		new DynamicObjectInsert().construct(destinationFile);
@@ -75,7 +75,7 @@ public class DynamicObjectInsert {
 			System.out.println("Unable to contninue invalid data");
 			return;
 		}
-		
+
 		XWPFDocument document = new XWPFDocument(new FileInputStream(templateSource));
 		XWPFTable tableCopy;
 		XWPFParagraph paragraph;
@@ -99,10 +99,9 @@ public class DynamicObjectInsert {
 			/** copy the template table */
 			tableCopy = new XWPFTable((CTTbl) cTTblTemplate.copy(), document);
 
-			
 			replaceImageInTables(tableCopy, jsonObject, destinationFile);
-			formatTableData(tableCopy, jsonObject);
-			
+			replaceTextInTables(tableCopy, jsonObject);
+
 			/** set tableCopy at position t instead of table */
 			document.setTable(t + 1, tableCopy);
 
@@ -138,7 +137,7 @@ public class DynamicObjectInsert {
 	}
 
 	/** replacing the placeholder in cell */
-	private void formatTableData(XWPFTable table, JSONObject jsonObject) {
+	private void replaceTextInTables(XWPFTable table, JSONObject jsonObject) {
 		for (XWPFTableRow xwpfTableRow : table.getRows()) {
 			for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
 				for (XWPFParagraph xwpfParagraph : xwpfTableCell.getParagraphs()) {
@@ -184,7 +183,7 @@ public class DynamicObjectInsert {
 						String text = xwpfRun.text();
 						if (text.startsWith(TEMPLATE_PREFIX) && text.contains(TEMPLATE_TEXT)) {
 							String url = jsonObject.get("avatar").toString();
-							loadUrl(url, destinationFile); 
+							loadUrl(url, destinationFile);
 							xwpfRun.setText("", 0);
 							xwpfRun.addPicture(is, XWPFDocument.PICTURE_TYPE_JPEG, destinationFile, Units.toEMU(120),
 									Units.toEMU(110));
