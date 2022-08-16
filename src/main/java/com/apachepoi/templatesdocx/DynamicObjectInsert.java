@@ -33,14 +33,28 @@ public class DynamicObjectInsert {
 	public static String pdfPath1 = "D:/Input/EDOut5.pdf";
 	public static String templateSource = "D:/Input/EMPLOYEEDETAIL.docx";
 	public static String inputJSONSource = "D:/sampleJson3.json";
-	public static JSONObject obj1;
-	public static String content;
+	public static String destinationFile = "D:/image.jpg"; 
+	
 
 	public static final String TEMPLATE_PREFIX = "${";
 	public static final String TEMPLATE_SUFIX = "}";
 	public static final String TEMPLATE_TEXT = "${avatar}";
-	public static XWPFDocument document;
+	
 
+
+	public static void main(String[] args) throws Exception {
+
+	//	String destinationFile = "D:/image.jpg"; 
+
+		new DynamicObjectInsert().construct(destinationFile);
+
+		new DocxToPdfConversion().ConvertToPDF(docPath1, pdfPath1);
+
+		LOGGER.info(pdfPath1);
+	}
+	
+	
+	
 	static XmlCursor setCursorToNextStartToken(XmlObject object) {
 		XmlCursor cursor = object.newCursor();
 		cursor.toEndToken();
@@ -49,24 +63,6 @@ public class DynamicObjectInsert {
 		return cursor;
 	}
 
-	static void removeCellValues(XWPFTableCell cell) {
-		for (XWPFParagraph paragraph : cell.getParagraphs()) {
-			for (int i = paragraph.getRuns().size() - 1; i >= 0; i--) {
-				paragraph.removeRun(i);
-			}
-		}
-	}
-
-	public static void main(String[] args) throws Exception {
-
-		String destinationFile = "D:/image.jpg";
-
-		new DynamicObjectInsert().construct(destinationFile);
-
-		new DocxToPdfConversion().ConvertToPDF(docPath1, pdfPath1);
-
-		LOGGER.info(pdfPath1);
-	}
 
 	/** construct method for JSON Array to replace placeholder */
 	private void construct(String destinationFile) throws Exception {
@@ -136,7 +132,7 @@ public class DynamicObjectInsert {
 		return document.getPosOfTable(theTable);
 	}
 
-	/** replacing the placeholder in cell */
+	/** replacing the text in placeholder cell */
 	private void replaceTextInTables(XWPFTable table, JSONObject jsonObject) {
 		for (XWPFTableRow xwpfTableRow : table.getRows()) {
 			for (XWPFTableCell xwpfTableCell : xwpfTableRow.getTableCells()) {
@@ -170,6 +166,7 @@ public class DynamicObjectInsert {
 		return xwpfRun;
 	}
 
+	/** replacing the image in placeholder cell */
 	static void replaceImageInTables(XWPFTable table, JSONObject jsonObject, String destinationFile)
 			throws Exception, NullPointerException {
 		FileInputStream is = new FileInputStream(destinationFile);
